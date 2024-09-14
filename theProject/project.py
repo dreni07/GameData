@@ -2,10 +2,31 @@ import streamlit as st
 import pandas as pd
 import plotly.express as pl
 import matplotlib.pyplot as plt
+import json
 
 # first find a average for global sales
+columns_to_be_removed = ['NA_Sales','JP_Sales','Other_Sales']
+
 st.title('Statistics For Games')
-the_df = pd.read_csv('vgsales.csv')
+
+full_df = pd.read_csv('vgsales.csv')
+st.sidebar.header('Filter The Game')
+platform = st.sidebar.selectbox('Platform',['All'] + list(full_df['Platform'].unique()))
+yeari = st.sidebar.selectbox('Year',['All'] + list(full_df['Year'].unique()))
+new_genre = st.sidebar.selectbox('Genre',['All'] + list(full_df['Genre'].unique()))
+new_publisher = st.sidebar.selectbox('Publisher',['All'] + list(full_df['Publisher'].unique()))
+the_new_df = full_df.copy()
+if platform != 'All':
+    the_new_df = the_new_df[the_new_df['Platform'] == platform]
+if yeari != 'All':
+    the_new_df = the_new_df[the_new_df['Year'] == yeari]
+if new_genre != 'All':
+    the_new_df = the_new_df[the_new_df['Genre'] == new_genre]
+if new_publisher != 'All':
+    the_new_df = the_new_df[the_new_df['Publisher'] == new_publisher]
+
+
+the_df = the_new_df.drop(columns=[col for col in columns_to_be_removed if col in full_df.columns])
 total_games = the_df.shape[0]
 global_sales = the_df['Global_Sales'].sum()
 eu_sales = round(the_df['EU_Sales'].sum(),2)
@@ -73,7 +94,7 @@ with colona2:
 
 # find the neweest game
 st.subheader('Top 5 Latest Games')
-kolona1,kolona2 = st.columns(2)
+[kolona1] = st.columns(1)
 
 with kolona1:
     newest_game = the_df.sort_values(by='Year', ascending=False)
@@ -87,6 +108,136 @@ with kolona1:
 
     into_data_frames = pd.DataFrame(datat)
     st.bar_chart(into_data_frames)
+
+st.text(' ')
+st.text(' ')
+st.text(' ')
+st.text(' ')
+st.text(' ')
+
+
+st.subheader('See Games Of The Genre You Want')
+[coll2] = st.columns(1)
+with coll2:
+    filter_by_genre = st.selectbox('Genre',the_df['Genre'].unique())
+    #display all the names
+    get_all = the_df[the_df['Genre'] == filter_by_genre]
+    st.write(get_all)
+
+st.text(' ')
+st.text(' ')
+st.text(' ')
+st.text(' ')
+st.text(' ')
+
+st.subheader('See The Platform')
+[coll3] = st.columns(1)
+with coll3:
+    filter_by_platform = st.selectbox('Platform',the_df['Platform'].unique())
+    get_data = the_df[the_df['Platform'] == filter_by_platform]
+    st.write(get_data)
+
+
+#
+st.sidebar.header('Add A Game We Are Missing!')
+with st.sidebar.form('Add Game'):
+    game_name = st.text_input('Game Name')
+    game_platform = st.text_input('Game Platform')
+    game_genre = st.text_input('Genre')
+    game_publisher = st.text_input('Publisher')
+    game_year = st.number_input('Year',min_value=1975,max_value=2024,step=1)
+    game_rank = st.slider('The Rank',min_value=the_df['Rank'].max(),max_value=the_df['Rank'].max() * 50,value=the_df['Rank'].max())
+    european_sales = st.slider('Eu Sales',min_value=0.1,max_value=the_df['EU_Sales'].max(),value=0.1)
+    global_sale = st.slider('Global Sales',min_value=0.1,max_value=the_df['Global_Sales'].max(),value=0.1)
+    the_submit = st.form_submit_button('Add Game')
+
+
+if the_submit:
+    the_data_to_be_added = {
+        'Rank':game_rank,
+        'Name':game_name,
+        'Platform':game_platform,
+        'Year':game_year,
+        'Genre':game_genre,
+        'Publisher':game_publisher,
+        'EU_Sales':european_sales,
+        'Global_Sales':global_sale
+    }
+
+    names = list(the_df['Name'])
+    if game_name not in names:
+        the_df = pd.concat([pd.DataFrame(the_data_to_be_added,index=[0]),the_df])
+        the_df.to_csv('vgsales.csv',index=False)
+
+        st.sidebar.success('Added')
+    else:
+        st.sidebar.info('Game Alredy In DataSet')
+
+
+
+
+st.sidebar.header('Save Your Favourite Game')
+
+with st.sidebar.form('Fav Game'):
+    game_name = st.text_input('Enter The Name')
+    rank_game = st.number_input('Enter The Rank')
+    the_submit = st.form_submit_button('Add')
+def saving():
+    if the_submit:
+        if game_name in list(the_df['Name']) and rank_game in list(the_df['Rank']):
+            with open('myFile.json', 'r+') as file:
+                notIn = False
+                the_data_set = the_df[the_df['Name'] == game_name]
+                the_full_data = {
+                    'Rank':str(the_data_set['Rank']),
+                    'Name':str(the_data_set['Name']),
+                    'Platform':str(the_data_set['Platform']),
+                    'Year':str(the_data_set['Year']),
+                    'Genre':str(the_data_set['Genre']),
+                    'Publisher':str(the_data_set['Publisher']),
+                    'EU_Sales':str(the_data_set['EU_Sales']),
+                    'Global_Sales':str(the_data_set['Global_Sales'])
+                }
+                reading = file.read()
+                if not reading:
+                    the_list = []
+                    the_list.append(the_full_data)
+                    into_json = json.dumps(the_list)
+                    file.write(into_json)
+                    st.sidebar.success('You Made It')
+                else:
+                    getting = list(json.loads(reading))
+                    getting.append(the_full_data)
+                    loading = list(json.loads(reading))
+                    for game in loading:
+                        if str(int(rank_game)) == game['Rank'].split('  ')[0]:
+                            notIn = True
+                            break
+                        st.write(game['Rank'].split('  '))
+                    if not notIn:
+                        with open('myFile.json','w') as f:
+                            f.write(json.dumps(getting))
+
+                        st.sidebar.info('Good Second One')
+                    else:
+                        st.sidebar.info('Sorry Alredy Added')
+
+saving()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
