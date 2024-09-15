@@ -166,7 +166,7 @@ if the_submit:
 
     names = list(the_df['Name'])
     if game_name not in names:
-        the_df = pd.concat([pd.DataFrame(the_data_to_be_added,index=[0]),the_df])
+        the_df = pd.concat([pd.DataFrame(the_data_to_be_added,index=[0]),the_df],ignore_index=False)
         the_df.to_csv('vgsales.csv',index=False)
 
         st.sidebar.success('Added')
@@ -180,7 +180,7 @@ st.sidebar.header('Save Your Favourite Game')
 
 with st.sidebar.form('Fav Game'):
     game_name = st.text_input('Enter The Name')
-    rank_game = st.number_input('Enter The Rank')
+    rank_game = st.number_input('Enter The Rank',step=1)
     the_submit = st.form_submit_button('Add')
 def saving():
     if the_submit:
@@ -189,14 +189,14 @@ def saving():
                 notIn = False
                 the_data_set = the_df[the_df['Name'] == game_name]
                 the_full_data = {
-                    'Rank':str(the_data_set['Rank']),
-                    'Name':str(the_data_set['Name']),
-                    'Platform':str(the_data_set['Platform']),
-                    'Year':str(the_data_set['Year']),
-                    'Genre':str(the_data_set['Genre']),
-                    'Publisher':str(the_data_set['Publisher']),
-                    'EU_Sales':str(the_data_set['EU_Sales']),
-                    'Global_Sales':str(the_data_set['Global_Sales'])
+                    'Rank':str(the_data_set['Rank'].tolist()[0]),
+                    'Name':str(the_data_set['Name'].tolist()[0]),
+                    'Platform':str(the_data_set['Platform'].tolist()[0]),
+                    'Year':str(the_data_set['Year'].tolist()[0]),
+                    'Genre':str(the_data_set['Genre'].tolist()[0]),
+                    'Publisher':str(the_data_set['Publisher'].tolist()[0]),
+                    'EU_Sales':str(the_data_set['EU_Sales'].tolist()[0]),
+                    'Global_Sales':str(the_data_set['Global_Sales'].tolist()[0])
                 }
                 reading = file.read()
                 if not reading:
@@ -210,10 +210,10 @@ def saving():
                     getting.append(the_full_data)
                     loading = list(json.loads(reading))
                     for game in loading:
-                        if str(int(rank_game)) == game['Rank'].split('  ')[0]:
+                        st.write(game['Rank'].split(' '))
+                        if str(int(rank_game)) == game['Rank'] and game_name == game['Name']:
                             notIn = True
                             break
-                        st.write(game['Rank'].split('  '))
                     if not notIn:
                         with open('myFile.json','w') as f:
                             f.write(json.dumps(getting))
@@ -221,8 +221,80 @@ def saving():
                         st.sidebar.info('Good Second One')
                     else:
                         st.sidebar.info('Sorry Alredy Added')
+        else:
+            st.sidebar.info('We Dont Have That Game In Dataset')
 
 saving()
+
+if st.button('See Favourites'):
+    with open('myFile.json') as file:
+        list_with_games = []
+        reading = json.loads(file.read())
+        the_ranks = the_df['Rank']
+        inside_game = False
+        for game in reading:
+            to_int = int(game['Rank'])
+            get_name = game['Name']
+            get_data = the_df[(the_df['Rank'] == to_int) & (the_df['Name'] == get_name)]
+            ready_to_be_filtered = {
+                'Rank':get_data['Rank'].tolist()[0],
+                'Name':get_data['Name'].tolist()[0],
+                'Platform':get_data['Platform'].tolist()[0],
+                'Year':get_data['Year'].tolist()[0],
+                'Genre':get_data['Genre'].tolist()[0],
+                'Publisher':get_data['Publisher'].tolist()[0],
+                'EU_Sales':get_data['EU_Sales'].tolist()[0],
+                'Global_Sales':get_data['Global_Sales'].tolist()[0]
+            }
+            if len(list_with_games) > 0:
+                for game in list_with_games:
+                    if game['Rank'] == ready_to_be_filtered['Rank']:
+                        inside_game = True
+            if not inside_game:
+                list_with_games.append(ready_to_be_filtered)
+
+
+        into_df = pd.DataFrame(list_with_games)
+
+
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+
+
+    kolona_1,kolona_2 = st.columns(2)
+    with kolona_1:
+        st.subheader('Top 3 Of Your Favourites Games(Globally)')
+        filtering = into_df.groupby('Name')['Global_Sales'].sum().head(3)
+        sorting = filtering.sort_values(ascending=False)
+        st.bar_chart(sorting)
+    with kolona_2:
+        st.subheader('Top 3 Of Your Favourites Games(In Eu)')
+        filtering = into_df.groupby('Name')['EU_Sales'].sum().head(3)
+        sorting = filtering.sort_values(ascending=False)
+        st.bar_chart(sorting)
+
+
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+    st.text(' ')
+
+
+    kolona_1_publishers,kolona_2_publishers = st.columns(2)
+    colors_sequence_2 = ['#07013d', '#054752', '#ffd9d0']
+    with kolona_1_publishers:
+        st.subheader('Publishers You Have In Your Favourites')
+        filtering = into_df['Publisher'].value_counts().head(3).reset_index()
+        filtering.columns = ['Publisher','Count']
+        the_pie = pl.pie(filtering,names='Publisher',title='Top Publishers',color_discrete_sequence=colors_sequence_2)
+        st.plotly_chart(the_pie)
+
+
+
 
 
 
