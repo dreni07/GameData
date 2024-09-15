@@ -227,6 +227,9 @@ def saving():
 saving()
 
 if st.button('See Favourites'):
+    the_column,the_second = st.columns([1,3])
+    with the_second:
+        st.header('Your Personal Games!')
     with open('myFile.json') as file:
         list_with_games = []
         reading = json.loads(file.read())
@@ -284,14 +287,27 @@ if st.button('See Favourites'):
     st.text(' ')
 
 
-    kolona_1_publishers,kolona_2_publishers = st.columns(2)
-    colors_sequence_2 = ['#07013d', '#054752', '#ffd9d0']
+    kolona_1_publishers,kolona_2_genres = st.columns([1,1])
+
     with kolona_1_publishers:
-        st.subheader('Publishers You Have In Your Favourites')
-        filtering = into_df['Publisher'].value_counts().head(3).reset_index()
+        st.subheader('Publishers You Like The Most')
+        filtering = into_df['Publisher'].value_counts().head(len(list_with_games)).reset_index()
         filtering.columns = ['Publisher','Count']
-        the_pie = pl.pie(filtering,names='Publisher',title='Top Publishers',color_discrete_sequence=colors_sequence_2)
+        the_pie = pl.pie(filtering,names='Publisher',title='Top Publishers',color_discrete_sequence=pl.colors.sequential.Viridis)
         st.plotly_chart(the_pie)
+
+
+    with kolona_2_genres:
+        st.subheader('Genres You Like The Most')
+        filtering = into_df['Genre'].value_counts().head(len(list_with_games)).reset_index()
+        filtering.columns = ['Genre','Publishers']
+        the_pie = pl.pie(filtering,names='Genre',title='Top Genres',color_discrete_sequence=pl.colors.sequential.Plasma)
+        st.plotly_chart(the_pie)
+
+    [second_last] = st.columns(1)
+    with second_last:
+        st.subheader('All Your Favourite Games')
+        st.write(into_df)
 
 
 
